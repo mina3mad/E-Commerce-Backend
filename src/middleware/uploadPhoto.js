@@ -11,7 +11,9 @@ export const customValidation={
 
 export const upload=(customValidation,folderName)=>{
     if(!fs.existsSync(`./uploads/${folderName}`)){
-      fs.mkdirSync(`./uploads/${folderName}`)
+      fs.mkdirSync(`./uploads/${folderName}`,(err) => {
+        if (err) throw new ErrorApp("Failed to create directory", 500);
+    })
     }
     const storage = multer.diskStorage({
         destination: function (req, file, cb) {

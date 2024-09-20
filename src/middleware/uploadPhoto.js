@@ -1,7 +1,7 @@
 import multer from "multer";
 import { nanoid } from "nanoid";
 import fs from 'fs'
-import ErrorApp from './../utiles/Error.js';
+import AppError from "./../utiles/Error.js";
 
 
 export const customValidation={
@@ -12,7 +12,7 @@ export const customValidation={
 export const upload=(customValidation,folderName)=>{
     if(!fs.existsSync(`./uploads/${folderName}`)){
       fs.mkdirSync(`./uploads/${folderName}`,(err) => {
-        if (err) throw new ErrorApp("Failed to create directory", 500);
+        if (err) throw new AppError("Failed to create directory", 500);
     })
     }
     const storage = multer.diskStorage({

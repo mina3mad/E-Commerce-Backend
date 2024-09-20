@@ -11,7 +11,7 @@ export const customValidation={
 
 export const upload=(customValidation,folderName)=>{
     if(!fs.existsSync(`./uploads/${folderName}`)){
-      fs.mkdirSync(`./uploads/${folderName}`,(err) => {
+      fs.mkdirSync(`./uploads/${folderName}`,{ recursive: true },(err) => {
         if (err) throw new AppError("Failed to create directory", 500);
     })
     }

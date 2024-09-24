@@ -1,23 +1,56 @@
 import Product from './../../../../database/models/Product.js';
 import AppError from '../../../utiles/Error.js';
 import asyncHandler from './../../../middleware/asyncHandler.js';
-import deleteOldImage from './../../../utiles/deleteOldImage.js';
 import ApiFeatues from '../../../utiles/apiFeatures.js';
+import cloudinary from '../../../utiles/cloudinary.js';
 
 
 
 export const addProduct=asyncHandler(
     async(req,res,next)=>{
         const {title}=req.body
+        //check if the product name exist before
+        const productExist=await Product.findOne({title})
+        if(productExist){
+            return next(new AppError("product already exist",409))
+        }
+
+
+        let ids=[]
+        //main image upload 
         if(req.files?.mainImage?.length){
-            req.body.mainImage=req.files.mainImage[0].filename
+            const{secure_url,public_id}=await cloudinary.uploader.upload(req.files.mainImage[0].path,{
+                folder:'uploads/product/mainImage',
+                use_filename:true
+            })
+            ids.push(public_id)
+            req.body.mainImage={ secure_url, public_id }
         }
         
-        req.body.coverImages=req.files?.coverImages?.map((element)=>element.filename)
+        let listArray=[]
+        //cover images upload
+        if(req.files?.coverImages?.length){
+        for (const image of req.files.coverImages) {
+            const{secure_url,public_id}=await cloudinary.uploader.upload(image.path,{
+                folder:'uploads/product/coverImages',
+                use_filename:true
+            })
+            listArray.push({ secure_url, public_id })
+            ids.push(public_id)
+            }
+            req.body.coverImages=listArray
+        }
+
+        // req.body.coverImages=req.files?.coverImages?.map((element)=>element.filename)
         
         req.body.slug=title.replaceAll(" ","-")
         req.body.createdBy=req.user.id
         const product=await Product.create(req.body)
+
+        //check if any error happen while creating in database
+        if(!product&&req.files){
+            await cloudinary.api.delete_resources(ids)
+        }
         return res.status(201).json({message:'product added successfully',product,status:201})
     }   
 )
@@ -54,21 +87,67 @@ export const getProduct=asyncHandler(
 export const updateProduct=asyncHandler(
     async(req,res,next)=>{
         const {title}=req.body
-        req.body.slug=title.replaceAll(" ","-")
-        if(req.files?.mainImage?.length){
-            req.body.mainImage=req.files?.mainImage[0]?.filename
-
+        // Fetch the existing product to delete old images later
+        const existingProduct = await Product.findById(req.params.id);
+        if (!existingProduct) {
+        return next(new AppError('Product does not exist', 404));
         }
 
-        req.body.coverImages=req.files?.coverImages?.map((element)=>element.filename)
-        const oldProduct=await Product.findById(req.params.id).lean();
-        const oldImagePath = oldProduct.mainImage;
+        req.body.slug=title.replaceAll(" ","-")
+        
 
-        //delete old photo if user enter a new one
-        deleteOldImage(req.files.mainImage,oldImagePath,'product')
-        const product=await Product.findByIdAndUpdate(req.params.id,req.body,{new:true})        
-        return !product?next(new AppError('product doesnt exist',404)):
-        res.json({message:'product updated successfully',product,status:200})
+        let ids=[]
+        //update main image 
+        if(req.files?.mainImage?.length){
+            const{secure_url,public_id}=await cloudinary.uploader.upload(req.files.mainImage[0].path,{
+                folder:'uploads/product/mainImage',
+                use_filename:true
+            })
+            ids.push(public_id)
+            req.body.mainImage={ secure_url, public_id }
+            
+        }
+
+        
+        let listArray=[]
+        //update cover Images
+        if(req.files?.coverImages?.length){
+        for (const image of req.files.coverImages) {
+            const{secure_url,public_id}=await cloudinary.uploader.upload(image.path,{
+                folder:'uploads/product/coverImages',
+                use_filename:true
+            })
+            listArray.push({ secure_url, public_id })
+            ids.push(public_id)
+            }
+            req.body.coverImages=listArray
+            
+        }
+
+
+        const updatedProduct=await Product.findByIdAndUpdate(req.params.id,req.body,{new:true})
+        //delete old photos only after successful upload of the new ones
+        if(updateProduct){
+            // Delete old main image from Cloudinary
+            if (existingProduct.mainImage?.public_id) {
+                await cloudinary.uploader.destroy(existingProduct.mainImage.public_id);
+                }
+            // Delete old cover images from Cloudinary
+            if (existingProduct.coverImages?.length) {
+                for (const oldImage of existingProduct.coverImages) {
+                    if (oldImage.public_id) {
+                    await cloudinary.uploader.destroy(oldImage.public_id);
+                    }
+                }
+                }
+        }   
+        if(!updateProduct){
+            if(req.file){
+                await cloudinary.api.delete_resources(ids)
+            }
+            return next(new AppError('product doesnt exist',404))
+        }     
+        return res.json({message:'product updated successfully',updatedProduct,status:200})
     }
 ) 
 

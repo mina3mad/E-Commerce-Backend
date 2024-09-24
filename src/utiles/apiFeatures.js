@@ -67,7 +67,7 @@ class ApiFeatues{
         query=JSON.stringify(query)
         query=query.replace(/gt|gte|lt|lte|eq/,(value)=>`$${value}`)
         query=JSON.parse(query)
-        console.log(query);
+        // console.log(query);
         this.mongooseQuery.find(query)
         return this
     }

@@ -14,7 +14,10 @@ const brandSchema=new mongoose.Schema({
         required:[true,'name is required'],
         lowerCase:true
     },
-    image:String,
+    image:{
+        secure_url:String,
+        public_id:String
+    },
     createdBy:{
         type:mongoose.Types.ObjectId,
         required:[true,'createdBy is required'],

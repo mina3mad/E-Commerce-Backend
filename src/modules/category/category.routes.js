@@ -8,10 +8,10 @@ import { authentication, authorization } from "../../middleware/auth.js";
 import systemRoles from './../../utiles/systemRoles.js';
 
 const categoryRouter=Router()
-categoryRouter.post('/',authentication,authorization([systemRoles.admin]),upload(customValidation.image,'category').single('image'),validation(addCategorySchema),categoryController.addCategory)
+categoryRouter.post('/',authentication,authorization([systemRoles.admin]),upload(customValidation.image).single('image'),validation(addCategorySchema),categoryController.addCategory)
         .get('/',categoryController.getCategories)
         .get('/:id',categoryController.getCategory)
-        .put('/:id',authentication,authorization([systemRoles.admin]),upload(customValidation.image,'category').single('image'),categoryController.updateCategory)
+        .put('/:id',authentication,authorization([systemRoles.admin]),upload(customValidation.image).single('image'),categoryController.updateCategory)
         .delete('/:id',authentication,authorization([systemRoles.admin]),categoryController.deleteCategory)
         .use('/:id/subcategories',subCategoryRouter)
 

@@ -1,15 +1,39 @@
 import Brand from './../../../../database/models/Brand.js';
 import AppError from '../../../utiles/Error.js';
 import asyncHandler from './../../../middleware/asyncHandler.js';
-import deleteOldImage from '../../../utiles/deleteOldImage.js';
 import ApiFeatues from '../../../utiles/apiFeatures.js';
 
 
 export const addBrand=asyncHandler(
     async(req,res,next)=>{
         const {name}=req.body
-        const slug =name.replaceAll(" ","-")
-        const brand=await Brand.create({name,slug,createdBy:req.user.id,image:req.file?.filename})
+
+
+        //check if the brand name exist before
+        const brandExist=await Brand.findOne({name})
+        if(brandExist){
+            return next(new AppError("brand already exist",409))
+        }
+
+
+        req.body.slug =name.replaceAll(" ","-")
+        req.body.createdBy =req.user.id
+
+
+        //check if there is file to upload
+        if(req.file){
+            const{secure_url,public_id}=await cloudinary.uploader.upload(req.file.path,{
+                folder:'uploads/brand',
+                use_filename:true
+            })
+            req.body.image={ secure_url, public_id }
+        }
+        const brand=await Brand.create(req.body)
+
+        //check if any error happen while creating in database
+        if(!brand&&req.file){
+            await deleteOldCloudinaryImage(req.body.image.public_id)
+        }
         return res.status(201).json({message:'brand added successfully',brand,status:201})
     }   
 )
@@ -38,15 +62,30 @@ export const getBrand=asyncHandler(
 export const updateBrand=asyncHandler(
     async(req,res,next)=>{
         const {name}=req.body
-        const slug =name.replaceAll(" ","-")
-        const oldBrand=await Brand.findById(req.params.id).lean();
-        const oldImagePath = oldBrand.image;
+        req.body.slug=name.replaceAll(" ","-")
+        // req.body.image=req.file?.filename
+        if(req.file){
+            const{secure_url,public_id}=await cloudinary.uploader.upload(req.file.path,{
+                folder:'uploads/subCategory',
+                use_filename:true
+            })
+            req.body.image={ secure_url, public_id }
+        }
+        const oldBrand=await Brand.findById(req.params.id);
 
-        //delete old photo if user enter a new one
-        deleteOldImage(req.file,oldImagePath,'brand')
-        const brand=await Brand.findByIdAndUpdate(req.params.id,{name,slug,image:req.file?.filename},{new:true})        
-        return !brand?next(new AppError('brand doesnt exist',404)):
-        res.json({message:'brand updated successfully',brand,status:200})
+         //delete old photo if admin enter a new one
+         if (oldBrand?.image && oldBrand?.image?.public_id && req.file) {
+            await deleteOldCloudinaryImage(oldBrand.image.public_id);
+        }
+
+        const brand=await Brand.findByIdAndUpdate(req.params.id,req.body,{new:true})
+        if(!brand){
+            if(req.file){
+                await deleteOldCloudinaryImage(req.body.image.public_id)
+            }
+            return next(new AppError('brand doesnt exist',404))
+        }        
+        return res.json({message:'brand updated successfully',brand,status:200})
     }
 ) 
 

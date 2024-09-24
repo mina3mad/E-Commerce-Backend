@@ -6,14 +6,13 @@ import AppError from '../../../utiles/Error.js';
 import sendEmail from './../../../utiles/sendEmail.js';
 // import {customAlphabet} from 'nanoid';
 
-
-
 export const signUp=asyncHandler(
     async (req,res,next)=>{
         const {name,email,password}=req.body
         const user=await User.findOne({email})
         if(!user){
-            req.body.password=bcryptjs.hashSync(password,process.env.SALT_ROUNDS)
+            const saltRounds = parseInt(process.env.SALT_ROUNDS, 10)
+            req.body.password=bcryptjs.hashSync(password,saltRounds)
             // const code=customAlphabet('0123456789',4)
             // req.body.OTP=code()
             const newUser=await User.create(req.body)

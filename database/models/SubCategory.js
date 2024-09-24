@@ -14,7 +14,10 @@ const subCategorySchema=new mongoose.Schema({
         required:[true,'name is required'],
         lowerCase:true
     },
-    image:String,
+    image:{
+        secure_url:String,
+        public_id:String
+    },
     category:{
         type:mongoose.Types.ObjectId,
         required:[true,"category is required"],
@@ -35,11 +38,11 @@ const subCategorySchema=new mongoose.Schema({
     versionKey:false
 })
 
-subCategorySchema.post('init',(doc)=>{
-    if(doc.image){
-        doc.image='http://localhost:3000/uploads/subCategory/'+doc.image
-    }
-})
+// subCategorySchema.post('init',(doc)=>{
+//     if(doc.image){
+//         doc.image='http://localhost:3000/uploads/subCategory/'+doc.image
+//     }
+// })
 
 const SubCategory=mongoose.model('SubCategory',subCategorySchema)
 export default SubCategory

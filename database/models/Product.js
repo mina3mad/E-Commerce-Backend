@@ -21,8 +21,14 @@ const productSchema=new mongoose.Schema({
         required:[true,'name is required'],
         lowerCase:true
     },
-    mainImage:String,
-    coverImages:[String],
+    mainImage:{
+        secure_url:String,
+        public_id:String
+    },
+    coverImages:[{
+        secure_url:String,
+        public_id:String
+    }],
     price:{
         type:Number,
         required:[true,'price is required'],

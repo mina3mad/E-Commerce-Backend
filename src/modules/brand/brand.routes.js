@@ -7,10 +7,10 @@ import { authentication, authorization } from "../../middleware/auth.js";
 import systemRoles from './../../utiles/systemRoles.js';
 
 const brandRouter=Router()
-brandRouter.post('/',authentication,authorization([systemRoles.admin]),upload(customValidation.image,'brand').single('image'),validation(addBrandSchema),brandController.addBrand)
+brandRouter.post('/',authentication,authorization([systemRoles.admin]),upload(customValidation.image).single('image'),validation(addBrandSchema),brandController.addBrand)
     .get('/',brandController.getBrands)
     .get('/:id',brandController.getBrand)
-    .put('/:id',authentication,authorization([systemRoles.admin]),upload(customValidation.image,'brand').single('image'),brandController.updateBrand)
+    .put('/:id',authentication,authorization([systemRoles.admin]),upload(customValidation.image).single('image'),brandController.updateBrand)
     .delete('/:id',authentication,authorization([systemRoles.admin]),brandController.deleteBrand)
 
 export default brandRouter

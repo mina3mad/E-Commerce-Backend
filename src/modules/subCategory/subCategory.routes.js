@@ -7,10 +7,10 @@ import { authentication, authorization } from "../../middleware/auth.js";
 import systemRoles from './../../utiles/systemRoles.js';
 
 const subCategoryRouter=Router({mergeParams:true})
-subCategoryRouter.post('/',authentication,authorization([systemRoles.admin]),upload(customValidation.image,'subCategory').single('image'),validation(addSubCategorySchema),subCategoryController.addSubCategory)
+subCategoryRouter.post('/',authentication,authorization([systemRoles.admin]),upload(customValidation.image).single('image'),validation(addSubCategorySchema),subCategoryController.addSubCategory)
     .get('/',subCategoryController.getSubCategories)
     .get('/:id',subCategoryController.getSubCategory)
-    .put('/:id',authentication,authorization([systemRoles.admin]),upload(customValidation.image,'subCategory').single('image'),subCategoryController.updateSubCategory)
+    .put('/:id',authentication,authorization([systemRoles.admin]),upload(customValidation.image).single('image'),subCategoryController.updateSubCategory)
     .delete('/:id',authentication,authorization([systemRoles.admin]),subCategoryController.deleteSubCategory)
 
 

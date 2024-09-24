@@ -1,14 +1,36 @@
 import Category from './../../../../database/models/Category.js';
 import AppError from '../../../utiles/Error.js';
 import asyncHandler from './../../../middleware/asyncHandler.js';
-import deleteOldImage from '../../../utiles/deleteOldImage.js';
 import ApiFeatues from './../../../utiles/apiFeatures.js';
 
 export const addCategory=asyncHandler(
     async(req,res,next)=>{
         const {name}=req.body
-        const slug =name.replaceAll(" ","-")
-        const category=await Category.create({name,slug,createdBy:req.user.id,image:req.file?.filename})
+
+        //check if the category name exist before
+        const categoryExist=await Category.findOne({name})
+        if(categoryExist){
+            return next(new AppError("category already exist",409))
+        }
+
+        //check if there is file to upload
+        if(req.file){
+            const{secure_url,public_id}=await cloudinary.uploader.upload(req.file.path,{
+                folder:'uploads/category',
+                use_filename:true
+            })
+            req.body.image={ secure_url, public_id }
+        }
+
+        req.body.slug =name.replaceAll(" ","-")
+        req.body.createdBy=req.user.id
+
+
+        const category=await Category.create(req.body)
+        //check if any error happen while creating in database
+        if(!category&&req.file){
+            await deleteOldCloudinaryImage(req.body.image.public_id)
+        }
         return res.status(201).json({message:'category added successfully',category,status:201})
     }   
 )
@@ -37,15 +59,31 @@ export const getCategory=asyncHandler(
 export const updateCategory=asyncHandler(
     async(req,res,next)=>{
         const {name}=req.body
-        const slug =name.replaceAll(" ","-")
-        const oldCategory=await Category.findById(req.params.id).lean();
-        const oldImagePath = oldCategory.image;
+        req.body.slug =name.replaceAll(" ","-")
 
-        //delete old photo if user enter a new one
-        deleteOldImage(req.file,oldImagePath,'category')
-        const category=await Category.findByIdAndUpdate(req.params.id,{name,slug,image:req.file?.filename},{new:true})        
-        return !category?next(new AppError('category doesnt exist',404)):
-        res.json({message:'category updated successfully',category,status:200})
+
+        const oldCategory=await Category.findById(req.params.id);
+        if (!oldCategory) {
+            return next(new AppError('category does not exist', 404));
+        }
+
+        if(req.file){
+            const{secure_url,public_id}=await cloudinary.uploader.upload(req.file.path,{
+                folder:'uploads/category',
+                use_filename:true
+            })
+            req.body.image={ secure_url, public_id }
+        }
+        const category=await Category.findByIdAndUpdate(req.params.id,req.body,{new:true})   
+        if(category){
+            if (oldCategory.image && oldCategory.image?.public_id && req.file) {
+                await deleteOldCloudinaryImage(oldCategory.image.public_id);
+            }
+        }
+        if(!category){
+            return next(new AppError('category doesnt exist',404))
+        }     
+        return res.json({message:'category updated successfully',category,status:200})
     }
 ) 
 
